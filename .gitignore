@@ -29,4 +29,5 @@ yarn-error.log*
 /backend/venv
 myenv
 /backend/.env
+/backend/uploads
 
