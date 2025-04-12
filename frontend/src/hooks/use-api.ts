@@ -234,9 +234,21 @@ export const useDiaryEntries = (userId: string | null) => {
 
   return { entries, loading, error, addEntry };
 };
-
+export type OCRMedicineResult = {
+  name?: string;
+  sub_category?: string;
+  salt_composition?: string;
+  description?: string; // ✅ extra
+  side_effects?: string;
+  price?: number;
+  manufacturer?: string; // ✅ extra
+  pack_size?: string; // ✅ extra
+  generic_name?: string;
+  unit_size?: string;
+  mrp?: number;
+};
 // OCR Processing
-export const processOCR = async (file: File): Promise<any> => {
+export const processOCR = async (file: File): Promise<OCRMedicineResult> => {
   const formData = new FormData();
   formData.append("image", file);
   

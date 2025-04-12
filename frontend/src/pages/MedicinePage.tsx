@@ -10,13 +10,37 @@ import { useDiaryEntries, useMedicines, processOCR } from "@/hooks/use-api";
 import { useAuth } from "@/contexts/auth-context";
 import SearchBar from "@/components/SearchBar";
 import type { DiaryEntry, Medicine } from "@/hooks/use-api";
+import type { OCRMedicineResult } from "@/hooks/use-api";
 
 const MedicinePage = () => {
   const location = useLocation();
+  const state = location.state as { ocrMedicine?: OCRMedicineResult } | null;
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
   const [medicineToRender, setMedicineToRender] = useState<Medicine | null>(null);
+  useEffect(() => {
+    if (state?.ocrMedicine) {
+      const ocrResult = state.ocrMedicine;
+  
+      const medicine: Medicine = {
+        id: "ocr-" + Date.now(),
+        name: ocrResult.name || "Unknown Medicine",
+        sub_category: ocrResult.sub_category || "Uncategorized",
+        salt_composition: ocrResult.salt_composition || "Not available",
+        medicine_desc: ocrResult.description || "No description available", // ✅ FIXED
+        side_effects: ocrResult.side_effects || "No side effects information available",
+        price: ocrResult.price || 0,
+        manufacturer_name: ocrResult.manufacturer || "Unknown", // ✅ FIXED
+        pack_size_label: ocrResult.pack_size || "N/A", // ✅ FIXED
+        generic_name: ocrResult.generic_name || "Not available",
+        unit_size: ocrResult.unit_size || "N/A",
+        mrp: ocrResult.mrp || 0,
+      };
+  
+      setMedicineToRender(medicine);
+    }
+  }, [state]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeLang, setActiveLang] = useState("en");
@@ -33,56 +57,7 @@ const MedicinePage = () => {
   const isSearchResults = !medicineName && searchQuery;
   const isDefaultView = !medicineName && !searchQuery && !medicineToRender;
 
-  // Function to handle file selection for OCR
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Process the image with OCR
-      const ocrResult = await processOCR(file);
-      
-      // Convert OCR result to Medicine object
-      const medicine: Medicine = {
-        id: "ocr-" + Date.now(),
-        name: ocrResult.name || "Unknown Medicine",
-        sub_category: ocrResult.category || "Uncategorized",
-        salt_composition: ocrResult.salt_composition || "Not available",
-        medicine_desc: ocrResult.description || "No description available",
-        side_effects: ocrResult.side_effects || "No side effects information available",
-        price: ocrResult.price || 0,
-        manufacturer_name: ocrResult.manufacturer || "Unknown",
-        pack_size_label: ocrResult.pack_size || "N/A",
-        generic_name: ocrResult.generic_name || "Not available",
-        unit_size: ocrResult.unit_size || "N/A",
-        mrp: ocrResult.mrp || 0,
-      };
-      
-      setMedicineToRender(medicine);
-      toast({
-        title: "Medicine Info Retrieved",
-        description: `Successfully processed information for ${medicine.name}`,
-      });
-    } catch (err) {
-      console.error("OCR processing error:", err);
-      setError("Failed to process medicine information from image");
-      toast({
-        title: "OCR Processing Failed",
-        description: "Could not extract medicine information from image",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Trigger file input click
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
+  
 
   const handleSaveToDiary = async () => {
     if (!isAuthenticated) {
@@ -174,17 +149,8 @@ const MedicinePage = () => {
               <SearchBar />
             </div>
             <div className="flex justify-center mb-8">
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                onChange={handleFileSelect}
-              />
-              <Button onClick={handleUploadClick} className="flex items-center">
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Medicine Image
-              </Button>
+              
+              
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-12">
               
@@ -217,17 +183,8 @@ const MedicinePage = () => {
           <p className="mb-6 text-muted-foreground">We couldn't find information for this medicine.</p>
           <div className="flex justify-center gap-4">
             <Button onClick={() => navigate("/")}>Return to Home</Button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*"
-              onChange={handleFileSelect}
-            />
-            <Button variant="outline" onClick={handleUploadClick}>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Medicine Image
-            </Button>
+            
+            
           </div>
         </div>
       </div>
@@ -245,17 +202,8 @@ const MedicinePage = () => {
             Back
           </Button>
           <div className="flex gap-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*"
-              onChange={handleFileSelect}
-            />
-            <Button variant="outline" size="sm" onClick={handleUploadClick}>
-              <Upload className="mr-2 h-4 w-4" />
-              Scan New
-            </Button>
+            
+            
             <Button variant="outline" size="sm" onClick={() => setActiveLang(activeLang === "en" ? "hi" : "en")}>
               <Languages className="mr-2 h-4 w-4" />
               {activeLang === "en" ? "Translate" : "English"}
