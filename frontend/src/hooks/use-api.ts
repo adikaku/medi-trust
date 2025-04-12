@@ -90,7 +90,26 @@ export const useMedicineByName = (name: string | null) => {
       try {
         const response = await fetch(`http://localhost:3000/api/medicine/search?name=${encodeURIComponent(name)}`);
         const data = await response.json();
-        setMedicine(data);
+
+// Normalize keys coming from MongoDB
+        const normalized: Medicine = {
+        id: data._id || data.id,
+        name: data.name || "Unknown Medicine",
+        sub_category: data.sub_category || "Uncategorized",
+        salt_composition: data.salt_composition || "Not available",
+        medicine_desc: data.medicine_desc || data.description || "No description available",
+        side_effects: data.side_effects || "No side effects info",
+        price: data["price(₹)"] || data.price || 0,
+        pack_size_label: data.pack_size_label || data.pack_size || "N/A",
+        manufacturer_name: data.manufacturer_name || data["generic_manufacturer"] || data.manufacturer || "Unknown",
+        generic_name: data.generic_name || data.generic_substitute_name || "Not available",
+        unit_size: data.unit_size || "N/A",
+        mrp: data.mrp || data.generic_price || 0,
+       };
+
+        
+        
+        setMedicine(normalized);
         setLoading(false);
       } catch (err) {
         setError("Failed to fetch medicine");

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { useDiaryEntries, useMedicines, processOCR } from "@/hooks/use-api";
+import { useDiaryEntries, useMedicines, useMedicineByName, processOCR } from "@/hooks/use-api";
 import { useAuth } from "@/contexts/auth-context";
 import SearchBar from "@/components/SearchBar";
 import type { DiaryEntry, Medicine } from "@/hooks/use-api";
@@ -49,14 +49,20 @@ const MedicinePage = () => {
 
   const queryParams = new URLSearchParams(location.search);
   const medicineName = queryParams.get("name");
+  const { medicines } = useMedicines();
   const searchQuery = queryParams.get("q");
 
-  const { medicines } = useMedicines();
+  const { medicine, loading: loadingByName, error: errorByName } = useMedicineByName(medicineName);
   const { addEntry } = useDiaryEntries(user?.id || null);
 
   const isSearchResults = !medicineName && searchQuery;
   const isDefaultView = !medicineName && !searchQuery && !medicineToRender;
-
+  useEffect(() => {
+    if (medicineName && medicine) {
+      setMedicineToRender(medicine);
+    }
+  }, [medicineName, medicine]);
+  console.log("✅ Medicine from backend:", medicine);
   
 
   const handleSaveToDiary = async () => {
