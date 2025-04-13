@@ -167,7 +167,7 @@ class GenericAlternativeFinder(MedicineOCR):
             print(f"[ERROR] Failed to connect to generic collection: {e}")
             exit()
     
-    # Function to normalize medicine text and extract structured information
+    # Function to normalize generic_medicine text and extract structured information
     def normalize_medicine_text(self, text):
         if pd.isna(text):
             return "", {}

@@ -91,7 +91,7 @@ export const useMedicineByName = (name: string | null) => {
         const response = await fetch(`http://localhost:3000/api/medicine/search?name=${encodeURIComponent(name)}`);
         const data = await response.json();
 
-// Normalize keys coming from MongoDB
+        // Normalize keys coming from MongoDB
         const normalized: Medicine = {
         id: data._id || data.id,
         name: data.name || "Unknown Medicine",
@@ -210,6 +210,7 @@ export const useDiaryEntries = (userId: string | null) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("👤 useDiaryEntries triggered with userId:", userId);
     const fetchEntries = async () => {
       if (!userId) {
         setEntries([]);
@@ -218,9 +219,30 @@ export const useDiaryEntries = (userId: string | null) => {
       }
 
       try {
-        const response = await fetch(`http://localhost:3000/api/diary?userId=${userId}`);
+        const token = localStorage.getItem("token");
+        console.log("📦 Token used for /api/diary fetch:", token);
+        const response = await fetch(`http://localhost:3000/api/diary`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch diary entries');
+        }
+        
         const data = await response.json();
-        setEntries(data);
+        const mappedEntries: DiaryEntry[] = data.map((entry: any) => ({
+          id: entry._id,
+          medicineId: entry.medicine_data?._id || "",
+          medicineName: entry.medicine_name,
+          date: entry.created_at || "", // ✅ for formatDate to work
+          tags: entry.tags || [],
+          notes: entry.notes || "",
+        }));
+
+        setEntries(mappedEntries);
+        
         setLoading(false);
       } catch (err) {
         setError("Failed to fetch diary entries");
@@ -231,27 +253,50 @@ export const useDiaryEntries = (userId: string | null) => {
     fetchEntries();
   }, [userId]);
 
-  const addEntry = async (entry: Omit<DiaryEntry, "id">) => {
+  const addEntry = async (medicineId: string, notes?: string, tags?: string[]) => {
     try {
+      const token = localStorage.getItem("token");
+      
       const response = await fetch("http://localhost:3000/api/diary", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(entry)
+        body: JSON.stringify({
+          medicineId,
+          notes: notes || '',
+          tags: tags || []
+        })
       });
 
-      if (!response.ok) return false;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add entry');
+      }
 
-      const newEntry: DiaryEntry = await response.json();
-      setEntries(prev => [newEntry, ...prev]);
+      // Refetch entries to include the new one
+      const updatedResponse = await fetch(`http://localhost:3000/api/diary`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const updatedData = await updatedResponse.json();
+      setEntries(updatedData);
+      
       return true;
-    } catch (err) {
+    } catch (error) {
+      console.error("Failed to add diary entry:", error);
+      setError(error instanceof Error ? error.message : "Unknown error");
       return false;
     }
   };
 
-  return { entries, loading, error, addEntry };
+  const addOcrEntry = async (medicineId: string, medicineName: string) => {
+    return addEntry(medicineId); // Reuse the standard addEntry function
+  };
+
+  return { entries, loading, error, addEntry, addOcrEntry };
 };
 export type OCRMedicineResult = {
   name?: string;
@@ -312,4 +357,25 @@ export const searchMedicines = async (query: string): Promise<Medicine[]> => {
     console.error("Search error:", error);
     return [];
   }
+};
+export const addOcrEntry = async ({
+  medicineId,
+  medicineName,
+}: {
+  medicineId: string;
+  medicineName: string;
+}) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`http://localhost:3000/api/diary/ocr`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ medicineId, medicineName }),
+  });
+  if (!res.ok) {
+    throw new Error("Failed to add OCR diary entry");
+  }
+  return res.json();
 };

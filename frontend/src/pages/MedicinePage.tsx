@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { useDiaryEntries, useMedicines, useMedicineByName, processOCR } from "@/hooks/use-api";
+import { useDiaryEntries, useMedicines, useMedicineByName, processOCR,addOcrEntry } from "@/hooks/use-api";
 import { useAuth } from "@/contexts/auth-context";
 import SearchBar from "@/components/SearchBar";
 import type { DiaryEntry, Medicine } from "@/hooks/use-api";
@@ -76,22 +76,25 @@ const MedicinePage = () => {
       return;
     }
 
-    if (!medicineToRender) return;
-
-    const entry: Omit<DiaryEntry, "id"> = {
-      medicineId: medicineToRender.id || "ocr",
-      medicineName: medicineToRender.name,
-      date: new Date().toISOString(),
-      tags: [medicineToRender.sub_category || "Uncategorized"],
-      notes: "Added from medicine info page",
-    };
-
-    const success = await addEntry(entry);
-
+    if (!medicineToRender?.id) {
+      toast({
+        title: "Error",
+        description: "Invalid medicine data",
+        variant: "destructive",
+      });
+      return;
+    }
+  
+    const success = await addOcrEntry({
+      medicineId: "ocr-result",
+      medicineName: medicineToRender.name 
+    });
     if (success) {
       toast({
         title: "Saved to Diary",
         description: `${medicineToRender.name} has been added to your diary`,
+        duration: 3000,
+        className: "bg-green-50 text-green-800",
       });
     } else {
       toast({
@@ -101,7 +104,6 @@ const MedicinePage = () => {
       });
     }
   };
-
   if (isSearchResults) {
     const filteredMedicines = medicines.filter(med => med.name.toLowerCase().includes(searchQuery!.toLowerCase()));
 

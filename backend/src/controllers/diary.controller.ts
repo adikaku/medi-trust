@@ -1,24 +1,83 @@
 import { Request, Response } from 'express';
-import Diary from '../models/diary.models';
+import {Medicine} from '../models/medicine.models';
+import UserLog, { IUserLog } from '../models/diary.models';
 
 export const getDiary = async (req: Request, res: Response) => {
   try {
-    const entries = await Diary.find({ userId: (req as any).user.id }); // or use a proper custom Request type
-    res.json(entries);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch diary entries' });
+    const userId = (req as any).userId;
+    console.log("🔐 Received userId in getDiary:", userId);
+    
+    const logs: IUserLog[] = await UserLog.find({ user_id: userId }).sort({ created_at: -1 });
+
+    console.log('Diary entries found:', logs.length);
+    logs.forEach((log) => {
+      console.log(JSON.stringify(log, null, 2));
+    });
+
+    res.status(200).json(logs);
+  } catch (error) {
+    console.error('Error fetching diary logs:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
 export const addEntry = async (req: Request, res: Response) => {
   try {
-    const newEntry = await Diary.create({
-      ...req.body,
-      userId: (req as any).user.id,
-      date: new Date()
+    const userId = (req as any).userId;
+    const { medicineId } = req.body;
+
+    console.log("📥 Received diary entry body:", req.body);
+    console.log("🔐 userId from token:", userId);
+
+    const medicine = await Medicine.findById(medicineId);
+
+    if (!medicine) {
+      console.warn("⚠️ Medicine not found for ID:", medicineId);
+      return res.status(404).json({ message: 'Medicine not found' });
+    }
+
+    const medData = medicine.toObject();
+
+    const log = new UserLog({
+      user_id: userId,
+      medicine_name: medData.name,
+      medicine_data: medData,
+      created_at: new Date()
     });
-    res.status(201).json(newEntry);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to add diary entry' });
-  }
+
+    await log.save();
+    console.log("✅ Diary entry saved:", log);
+
+    res.status(201).json({ message: 'Diary entry added successfully' });
+  } catch (error) {
+    console.error('Error adding diary entry:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const addOcrEntry = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const { medicineId, medicineName, notes, tags } = req.body;
+
+    console.log("📥 OCR diary entry body:", req.body);
+    console.log("🔐 userId from token:", userId);
+
+    const log = new UserLog({
+      user_id: userId,
+      medicine_name: medicineName || medicineId, // fallback if name not passed
+      medicine_data: null, // No DB medicine data for OCR
+      notes: notes || "",
+      tags: tags || [],
+      created_at: new Date()
+    });
+
+    await log.save();
+    console.log("✅ OCR Diary entry saved:", log);
+
+    res.status(201).json({ message: "OCR Diary entry added successfully" });
+  } catch (error) {
+    console.error("❌ Error adding OCR diary entry:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };

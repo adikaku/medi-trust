@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 type User = {
@@ -23,9 +22,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
     const storedUser = localStorage.getItem("meditrust-user");
-    if (storedUser) {
+    const token = localStorage.getItem("token");
+    if (storedUser && token) {
       setUser(JSON.parse(storedUser));
     }
     setIsLoading(false);
@@ -34,26 +33,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      // This is a mock implementation
-      // In a real app, you would make an API call here
-      
-      // Mock data
-      const mockUser = {
-        id: "user123",
-        email,
-        name: "John Doe",
-      };
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock validation - in real app, this would be done on the server
-      if (email === "user@example.com" && password === "password") {
-        setUser(mockUser);
-        localStorage.setItem("meditrust-user", JSON.stringify(mockUser));
-        return true;
+
+      const res = await fetch("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+      console.log("🟢 Backend login response:", data);
+
+      if (!res.ok) {
+        console.error("Login failed:", data.message);
+        return false;
       }
-      return false;
+
+      const userData = {
+        id: data.userId,
+        name: data.name,
+        email: email,
+      };
+
+      console.log("📦 Setting userData:", userData);
+      
+      setUser(userData);
+      localStorage.setItem("meditrust-user", JSON.stringify(userData));
+      localStorage.setItem("token", data.token);
+      return true;
     } catch (error) {
       console.error("Login error:", error);
       return false;
@@ -65,19 +71,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signup = async (name: string, email: string, password: string) => {
     try {
       setIsLoading(true);
-      // Mock implementation
-      
-      const mockUser = {
-        id: "user" + Math.floor(Math.random() * 1000),
-        email,
-        name,
+
+      const res = await fetch("http://localhost:3000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Signup failed:", data.message);
+        return false;
+      }
+
+      const userData = {
+        id: data.userId,
+        name: data.name,
+        email: email,
       };
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setUser(mockUser);
-      localStorage.setItem("meditrust-user", JSON.stringify(mockUser));
+
+      setUser(userData);
+      localStorage.setItem("meditrust-user", JSON.stringify(userData));
+      localStorage.setItem("token", data.token);
+
       return true;
     } catch (error) {
       console.error("Signup error:", error);
@@ -90,6 +107,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("meditrust-user");
+    localStorage.removeItem("token");
   };
 
   return (

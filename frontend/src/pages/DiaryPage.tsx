@@ -1,4 +1,4 @@
-
+import { formatDate } from "../utils/date-utils";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -33,6 +33,8 @@ const DiaryPage = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<"all" | "recent" | "tagged">("all");
   
+  console.log("🔍 useAuth() output:", user, isAuthenticated);
+
   // Redirect if not logged in
   useEffect(() => {
     if (!isAuthenticated && !loading) {
@@ -109,16 +111,7 @@ const DiaryPage = () => {
     }, 2000);
   };
   
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-    }).format(date);
-  };
+
   
   if (!isAuthenticated) {
     return null; // Will redirect in useEffect
@@ -238,18 +231,6 @@ const DiaryPage = () => {
                     <span className="text-sm">Total Entries</span>
                     <span className="font-medium">{entries.length}</span>
                   </div>
-                  <Separator />
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Unique Medicines</span>
-                    <span className="font-medium">
-                      {new Set(entries.map((e) => e.medicineId)).size}
-                    </span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Categories</span>
-                    <span className="font-medium">{allTags.length}</span>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -267,10 +248,10 @@ const DiaryPage = () => {
                       <TabsTrigger value="tagged">Tagged</TabsTrigger>
                     </TabsList>
                     
-                    <Button variant="outline" size="sm">
+                    {/* <Button variant="outline" size="sm">
                       <Plus className="mr-2 h-4 w-4" />
                       Add Entry
-                    </Button>
+                    </Button>*/}
                   </div>
                 </Tabs>
               </CardHeader>
@@ -303,12 +284,12 @@ const DiaryPage = () => {
                         ? "Your diary is empty. Add medicines to keep track of them."
                         : "No entries match your current filters. Try adjusting your search."}
                     </p>
-                    {entries.length === 0 && (
+                    {/*{entries.length === 0 && (
                       <Button>
                         <Plus className="mr-2 h-4 w-4" />
                         Add First Entry
-                      </Button>
-                    )}
+                      </Button> 
+                    )} */}
                     {entries.length > 0 && (
                       <Button variant="outline" onClick={clearFilters}>
                         <Filter className="mr-2 h-4 w-4" />
@@ -337,16 +318,7 @@ const DiaryEntryCard = ({ entry }: DiaryEntryCardProps) => {
     navigate(`/medicine?name=${encodeURIComponent(entry.medicineName)}`);
   };
   
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-    }).format(date);
-  };
+  
   
   return (
     <div 
